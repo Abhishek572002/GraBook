@@ -5,7 +5,7 @@ const connection =mysql.createConnection({
     port:3306,
     database:'ecommerce',
     user:'root',
-    password:'07022003'
+    password:'12345678'
 });
 connection.connect(function (err) {
     if(err){

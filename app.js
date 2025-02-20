@@ -74,7 +74,7 @@ else {
 app.post('/search',function(req,res){
   let key=req.body.keyword;
   console.log(key);
-  connection.query("select *from book where (title REGEXP '"+key+"' or author REGEXP '"+key+"' or publication_name REGEXP '"+key+"') and book_status='sale';", (err, results, rows) => {
+  connection.query("select * from book where (title REGEXP '"+key+"' or author REGEXP '"+key+"' or publication_name REGEXP '"+key+"') and book_status='sale';", (err, results, rows) => {
     if(err) throw err;
     if(results.length==0){ 
       console.log("No such records exist");
@@ -87,15 +87,36 @@ app.post('/search',function(req,res){
   }
 });
 })
-app.get('/grab_book',function(req,res){
-  let user=req.session.user_info;
-  let books;
-  connection.query("select *from book where seller_user_name!=?;",[user.user_name], (err, results, rows) => {
-    if(err) throw err;
-    books=results;
-    res.render('grab_book.pug',{user,books});
+// app.get('/grab_book',function(req,res){
+//   let user=req.session.user_info;
+//   let books;
+//   connection.query("select * from book where seller_user_name!=?;",[user.user_name], (err, results, rows) => {
+//     if(err) throw err;
+//     books=results;
+//     res.render('grab_book.pug',{user,books});
+// });
+// })
+app.get('/grab_book', function (req, res) {
+  let user = req.session.user_info;
+
+  // If user session is not found, redirect to login page or show an error
+  if (!user || !user.user_name) {
+    return res.status(401).send("Unauthorized: Please log in first.");
+  }
+
+  connection.query(
+    "SELECT * FROM book WHERE seller_user_name != ?;", 
+    [user.user_name], 
+    (err, results) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).send("Internal Server Error");
+      }
+      res.render('grab_book.pug', { user, books: results });
+    }
+  );
 });
-})
+
 app.get('/edit_profile',isAuth,function(req,res){
     let user=req.session.user_info;
     res.render('edit_profile.pug',{user});
@@ -310,16 +331,41 @@ app.post('/book_upload',isAuth,function(req,res){
         }
       });
       if(pos){
-        connection.query("insert into book(title,author,description,age,genre,ISBN,price,year_of_publication,image_1,image_2,image_3,image_4,seller_user_name) values (?,?,?,?,?,?,?,?,?,?,?,?,?)",[book_data.title,book_data.author,book_data.description,book_data.age,book_data.genre,book_data.ISBN,book_data.price,book_data.year_of_publication,path1,path2,path3,path4,user.user_name],(err,results,rows)=>{
-          if(err){
-            res.send(err);
-            throw err;
-          }
-          else{
-            console.log("book added!");
+        // connection.query("insert into book(title, author, age_of_book, genre, ISBN, price, year_of_publication,image_1, image_2, image_3, image_4, seller_user_name,  publication_name, date_of_post, place) values (?,?,?,?,?,?,?,?,?,?,?,?,?)",[book_data.title,book_data.author,book_data.age,book_data.genre,book_data.ISBN,book_data.price,book_data.year_of_publication,path1,path2,path3,path4,user.user_name],(err,results,rows)=>{
+        //   if(err){
+        //     res.send(err);
+        //     throw err;
+        //   }
+        //   else{
+        //     console.log("book added!");
+        //     res.redirect('/books_in_ad');
+        //   }
+        // });
+        connection.query(
+          "INSERT INTO book (title, author, age_of_book, genre, ISBN, price, year_of_publication, image_1, image_2, image_3, image_4, seller_user_name, publication_name, date_of_post, place) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,CURDATE(),?)", 
+          [
+            book_data.title, 
+            book_data.author, 
+            book_data.age_of_book,  // Ensure 'age_of_book' is used, not 'age'
+            book_data.genre, 
+            book_data.ISBN, 
+            book_data.price, 
+            book_data.year_of_publication, 
+            path1, path2, path3, path4, 
+            user.user_name, 
+            book_data.publication_name, 
+            book_data.place  // Added missing 'place' value
+          ],
+          (err, results) => {
+            if (err) {
+              console.error("Error inserting book:", err);
+              return res.status(500).send(err);
+            }
+            console.log("Book added!");
             res.redirect('/books_in_ad');
           }
-        });
+        );
+        
       }
     }
   });
@@ -390,12 +436,12 @@ app.get('/ratings_reviews',function(req,res){
   let user=req.session.user_info;
   let seller_id=req.query.id;
 
-  connection.query("select* from reviews where seller_user_name=?",[seller_id],(err,results,rows)=>{
+  connection.query("select * from reviews where seller_user_name=?",[seller_id],(err,results,rows)=>{
     if(err){
       throw err;
     }
     let reviews=results;
-    connection.query("select* from user where user_name=?;",[seller_id],(err,result,rows)=>{
+    connection.query("select * from user where user_name=?;",[seller_id],(err,result,rows)=>{
       if(err)throw err;
       let seller=result[0];
       res.render("ratings_reviews",{reviews,user,seller});
@@ -427,11 +473,11 @@ app.post('/request_offer/:id',isAuth,function(req,res){
 app.get('/requests',isAuth,function(req,res){
   let user=req.session.user_info;
   let book_id=req.query.id;
-  connection.query("select* from buy where book_id=? and acceptance_status='not accepted';",[book_id],(err,results,rows)=>{
+  connection.query("select * from buy where book_id=? and acceptance_status='not accepted';",[book_id],(err,results,rows)=>{
     if(err)throw err;
     let requests=results;
     console.log(requests);
-    connection.query("select* from book where book_id=?;",[book_id],(err,result,rows)=>{
+    connection.query("select * from book where book_id=?;",[book_id],(err,result,rows)=>{
       if(err)throw err;
       let book=result[0];
       console.log(book);
