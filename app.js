@@ -55,7 +55,7 @@ app.get('/signin', function (req, res) {
 app.post('/signin',function(req,res){
 
   let user_data=req.body;
-  connection.query("select *from user where email_id= '"+user_data.email_id+"'and password= MD5('"+user_data.password+"');", (err, results, rows) => {
+  connection.query("select * from user where email_id= '"+user_data.email_id+"'and password= MD5('"+user_data.password+"');", (err, results, rows) => {
   
   if(err) throw err;
 
@@ -136,7 +136,7 @@ app.post('/edit_profile',isAuth,function(req,res){
     if(err){
       throw err;
     }
-    connection.query("select *from user where user_name= '"+user.user_name+"';", (err, results, rows) => {
+    connection.query("select * from user where user_name= '"+user.user_name+"';", (err, results, rows) => {
   
       if(err) throw err;
     
@@ -253,7 +253,7 @@ app.get('/logout',function(req,res){
 app.get('/book' ,isAuth, function(req,res){
   let book_id=req.query.id;
   let user=req.session.user_info;
-  connection.query("select *from book where book_id= '"+book_id+"';", (err, results, rows) => {
+  connection.query("select * from book where book_id= '"+book_id+"';", (err, results, rows) => {
     if(err) throw err;
 
     if(results.length==0){ 
@@ -261,7 +261,7 @@ app.get('/book' ,isAuth, function(req,res){
             res.status(200).redirect('/');}
   else {
     let book=results[0];
-    connection.query("select *from wishlist where user_name=? and book_id=?;",[user.user_name,book_id],(err,results,rows)=>{
+    connection.query("select * from wishlist where user_name=? and book_id=?;",[user.user_name,book_id],(err,results,rows)=>{
       if(err)throw err;
       if(results.length==0){
         let detail=0;
